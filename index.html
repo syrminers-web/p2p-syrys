@@ -1,357 +1,66 @@
 <!doctype html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <title>LAN P2P Demo - PeerJS single file</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:12px;background:#f6f7fb;color:#111}
-    #top{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-    button{padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer}
-    #status{font-size:0.9rem;color:#333}
-    #game{border:1px solid #999;background:#fff;display:block;margin-top:8px}
-    #controls{margin-left:12px}
-    #log{height:80px;overflow:auto;background:#fff;border:1px solid #ddd;padding:6px;font-size:12px}
-    .small{font-size:0.9rem;color:#444}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ruleta Europea — P2P Slot Demo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+<style>
+:root{--bg1:#E6F8FF;--bg2:#FFF0F7;--accent:#FF6B9A;--accent-2:#7ED7FF;--card:#ffffff;--muted:#6b7280;--shadow:0 18px 50px rgba(8,24,40,0.08);--success:#27ae60;--danger:#e74c3c}
+*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter,Arial,system-ui;background:linear-gradient(135deg,var(--bg1),var(--bg2));color:#061626}.app{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px}.shell{width:1200px;max-width:98%;display:grid;grid-template-columns:420px 1fr;gap:22px;align-items:start}.left-card{background:linear-gradient(180deg,rgba(255,255,255,0.92),#fff);border-radius:16px;padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}.brand{display:flex;align-items:center;gap:12px;margin-bottom:6px}.logo{width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg,var(--accent-2),var(--accent));display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:28px;box-shadow:0 8px 30px rgba(126,215,255,0.18)}.title{font-size:20px;font-weight:900;margin-bottom:4px}.subtitle{font-size:13px;color:var(--muted)}.intro{margin-top:12px;border-radius:12px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(126,215,255,0.06),rgba(255,107,154,0.04));min-height:240px}.spark{position:absolute;width:220%;height:220%;left:-60%;top:-40%;background:radial-gradient(circle at 30% 30%, rgba(126,215,255,0.18), transparent 12%), radial-gradient(circle at 70% 70%, rgba(255,107,154,0.14), transparent 12%);transform:rotate(10deg);filter:blur(18px);opacity:0.95;animation:float 8s ease-in-out infinite}@keyframes float{0%{transform:translateY(0) rotate(12deg)}50%{transform:translateY(-8px) rotate(8deg)}100%{transform:translateY(0) rotate(12deg)}}.center-dialog{width:100%;max-width:340px;background:linear-gradient(180deg,#ffffff,#fbfdff);padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.04);box-shadow:0 6px 20px rgba(8,24,40,0.04);display:flex;flex-direction:column;gap:8px;align-items:stretch;z-index:3}.input{width:100%;padding:12px;border-radius:10px;border:1px solid #eef3f8;font-size:15px;background:linear-gradient(180deg,#fff,#fbfdff);outline:none}.row{display:flex;gap:8px;align-items:center;margin-top:4px}.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent-2),var(--accent));color:#fff;font-weight:800;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,0.06)}.small-btn{padding:8px 10px;border-radius:10px;border:0;background:#f3f6f9;color:#135;cursor:pointer}.panel{margin-top:12px;background:#fff;border-radius:12px;padding:12px;border:1px solid #f0f3f5;display:none}.code-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;max-height:220px;overflow:auto}.code-item{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:10px;border:1px dashed #f0f3f5;background:#fff}.copy-btn{background:linear-gradient(90deg,var(--accent-2),var(--accent));color:white;padding:6px 8px;border-radius:8px;border:0;font-weight:700;cursor:pointer}.right{background:transparent}.table-wrap{background:linear-gradient(180deg,rgba(255,255,255,0.98),#fff);border-radius:16px;padding:14px;box-shadow:var(--shadow);min-height:720px;display:flex;flex-direction:column;gap:14px}.top-row{display:flex;justify-content:space-between;align-items:center}.game-title{font-weight:900;font-size:20px}.controls-row{display:flex;gap:12px;align-items:center}.pill-small{padding:6px 10px;border-radius:999px;background:#fafafa;border:1px solid #eee;font-weight:800}.board{display:flex;gap:16px;align-items:flex-start;justify-content:center;flex-wrap:wrap}.canvas-wrap{position:relative;width:680px;height:420px;border-radius:12px;background:linear-gradient(180deg,#f6fcff,#fff);display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 10px 40px rgba(8,24,40,0.04)}#paperCanvas{width:100%;height:100%}.center-badge{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;padding:10px 16px;border-radius:12px;background:linear-gradient(90deg,#fff,#fbfdff);box-shadow:0 8px 30px rgba(8,24,40,0.08);font-weight:900;z-index:6}.side-panel{width:360px;display:flex;flex-direction:column;gap:12px;min-width:320px}.bet-board{background:linear-gradient(180deg,#fff,#fff);padding:12px;border-radius:12px;border:1px solid #f0f3f5;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-height:340px;overflow:auto}.bet-cell{background:linear-gradient(180deg,#fbfdff,#ffffff);border-radius:10px;padding:12px;text-align:center;cursor:pointer;border:1px solid #e8eef8;user-select:none;position:relative;min-height:56px;display:flex;flex-direction:column;justify-content:center;align-items:center}.bet-amount{margin-top:8px;font-weight:800;color:#333}.bet-tag{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,0.06);padding:4px 8px;border-radius:8px;font-size:12px}.player-view{background:#fff;padding:10px;border-radius:10px;border:1px solid #f0f3f5;max-height:180px;overflow:auto}.logs{font-size:13px;color:var(--muted);max-height:140px;overflow:auto;background:#fff;border:1px solid #eee;padding:8px;border-radius:8px}.modal-overlay{position:fixed;left:0;top:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(5,10,20,0.45);z-index:999}.modal{background:#fff;padding:18px;border-radius:12px;max-width:560px;width:94%;box-shadow:var(--shadow)}@media(max-width:1100px){.shell{grid-template-columns:1fr}.canvas-wrap{width:100%;height:420px}.side-panel{width:100%}}</style>
 </head>
 <body>
-  <div id="top">
-    <div>
-      <button id="startHost">Iniciar consola (host)</button>
-      <button id="startClient">Conectar como jugador</button>
+<div class="app"><div class="shell">
+<div class="left-card">
+  <div class="brand"><div class="logo">R</div><div><div class="title">Ruleta Royal</div><div class="subtitle">Conexión P2P (PeerJS) — Demo</div></div></div>
+  <div class="intro"><div class="spark" aria-hidden="true"></div>
+    <div class="center-dialog" id="loginArea"><input id="codeInput" class="input" placeholder="Ingresa código" autocomplete="off" maxlength="40" />
+      <div class="row"><button id="enterBtn" class="btn">Entrar</button><button id="demoHostBtn" class="small-btn">Host demo</button><button id="demoAdminBtn" class="small-btn">Admin demo</button><button id="demoPlayerBtn" class="small-btn">Jugador demo</button></div>
+      <div class="row" style="justify-content:space-between"><div id="sessionInfo" style="font-weight:700">Modo: local</div><div style="font-size:12px;color:var(--muted)">Paper.js + PeerJS</div></div>
     </div>
-    <div id="status">Estado: inactivo</div>
-    <div id="controls" class="small">
-      Tu ID: <span id="myId">-</span> &nbsp; | &nbsp;
-      Conectado a: <span id="peerId">-</span>
+    <div id="hostPanel" class="panel" aria-hidden="true"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:900">Host</div><div style="margin-top:6px"><span id="hostId" style="font-weight:900">—</span></div></div><div><button id="startRoundBtn" class="small-btn">Iniciar Ronda</button></div></div>
+      <div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="genPlayerCode" class="small-btn">Generar Jugador</button><button id="genAdminCode" class="small-btn">Generar Admin</button><button id="genReconnect" class="small-btn">Gen Reco</button></div><div class="code-list" id="hostCodes"></div></div>
+      <div style="margin-top:12px"><div style="font-weight:900;margin-bottom:8px">Jugadores conectados</div><div class="player-view" id="hostPlayers"></div></div>
     </div>
-  </div>
-
-  <canvas id="game" width="640" height="360"></canvas>
-
-  <div style="margin-top:8px;display:flex;gap:8px">
-    <div style="flex:1">
-      <div class="small">Registro (mensajes de señal/estado)</div>
-      <div id="log"></div>
-    </div>
-    <div style="width:240px">
-      <div class="small">Instrucciones</div>
-      <div style="background:#fff;border:1px solid #ddd;padding:8px;font-size:13px">
-        - Presiona "Iniciar consola (host)" en la máquina que actuará como host. Copia el "Tu ID" y compártelo con jugadores.<br>
-        - En cada jugador: presiona "Conectar como jugador" e introduce el ID del host cuando se pida.<br>
-        - Host mueve la pelota (arrastra con el ratón) o presiona espacio para lanzarla; jugadores mueven su paleta con el mouse para atraparla.<br>
-        - Comunicación P2P usa PeerJS public broker. Si falla, recarga la página.
-      </div>
+    <div id="adminPanel" class="panel" aria-hidden="true"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:900">Admin</div><div id="adminId" style="font-weight:900">—</div></div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button id="adminForceNumber" class="small-btn">Forzar Nº</button><button id="adminForceWinMany" class="small-btn">Forzar Ganadores</button><button id="adminForceLoseMany" class="small-btn">Forzar Pérdida</button><select id="bonusSelect" class="small-btn"><option value="none">Bonus</option><option value="2">x2</option><option value="3">x3</option><option value="4">x4</option><option value="5">x5</option></select><input id="bonusRounds" class="small-input" style="width:70px" placeholder="R" /><button id="applyBonus" class="small-btn">OK</button></div>
+      <div style="margin-top:12px"><div style="font-weight:900;margin-bottom:8px">Jugadores</div><div class="player-view" id="adminPlayers"></div></div>
+      <div style="margin-top:12px"><div style="font-weight:900;margin-bottom:8px">Alertas</div><div id="adminAlerts" class="logs"></div></div>
     </div>
   </div>
-
+</div>
+<div class="right"><div class="table-wrap"><div class="top-row"><div class="game-title">Ruleta Europea — Demo Slot</div><div class="controls-row"><div class="pill-small">Ronda: <span id="roundNum">0</span></div><div class="pill-small">Tiempo: <span id="roundTimer">—</span></div></div></div>
+<div class="board"><div class="canvas-wrap"><canvas id="paperCanvas" resize></canvas><div class="center-badge" id="centerResult">—</div></div>
+<div class="side-panel"><div style="font-weight:900">Tablero</div><div class="bet-board" id="betBoard"></div><div style="margin-top:6px"><div style="font-weight:900">Jugadores</div><div class="player-view" id="playersSide"></div></div><div style="margin-top:6px"><div style="font-weight:900">Logs</div><div id="logs" class="logs"></div></div></div>
+</div></div></div></div>
+</div>
+<div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalContent"></div></div>
 <script>
-/*
-  Single-file P2P demo using PeerJS public broker.
-  - Host: creates a DataConnection for each client and sends authoritative ball state.
-  - Client: connects to host's peer ID, receives ball updates and sends paddle position.
-  - Messages are JSON with type: 'ball', 'paddle', 'join', 'chat'
-  Notes:
-  - PeerJS uses a public broker by default; reliability not guaranteed but works for testing.
-  - Serve via HTTP(S) for best results (some browsers restrict getUserMedia/secure contexts).
-*/
-
-// --- Utilities ---
-const logEl = id('log');
-function log(msg){ const p=document.createElement('div'); p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`; logEl.appendChild(p); logEl.scrollTop = logEl.scrollHeight; }
-function id(x){ return document.getElementById(x); }
-function qs(sel){ return document.querySelector(sel); }
-
-// --- PeerJS loader (dynamic) ---
-function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
-
-// --- Game state ---
-const canvas = id('game');
-const ctx = canvas.getContext('2d');
-const W = canvas.width, H = canvas.height;
-let mode = 'idle'; // 'host' or 'client'
-let peer = null;
-let connections = {}; // for host: peerId -> conn
-let conn = null; // for client: connection to host
-
-// Ball state (host authoritative)
-const ball = { x: W/2, y: H/2, vx: 0, vy: 0, r: 10, held: false };
-
-// Players state (client sends paddle pos)
-const paddles = {}; // peerId -> {x,y,w,h,color}
-
-// Host ID shown in UI
-const myIdEl = id('myId');
-const peerIdEl = id('peerId');
-const statusEl = id('status');
-
-function setStatus(s){ statusEl.textContent = 'Estado: ' + s; }
-
-// Demo colors
-function colorFor(id){ let h = 0; for(let i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i))%360; return `hsl(${h},70%,45%)`; }
-
-// --- Rendering ---
-function draw(){
-  ctx.clearRect(0,0,W,H);
-  // draw ball
-  ctx.fillStyle = '#e33';
-  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
-
-  // paddles
-  for(const pid in paddles){
-    const p = paddles[pid];
-    ctx.fillStyle = p.color || '#246';
-    ctx.fillRect(p.x - p.w/2, p.y - p.h/2, p.w, p.h);
-    ctx.fillStyle = '#fff';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(pid === peer?.id ? 'YOU' : pid.slice(0,6), p.x - p.w/2 + 6, p.y + 4);
-  }
-
-  // host label
-  if(mode === 'host'){
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(6,6,120,26);
-    ctx.fillStyle = '#fff';
-    ctx.font = '13px sans-serif';
-    ctx.fillText('Host (authoritative)', 12, 24);
-  }
-}
-
-// --- Physics update (host authoritative) ---
-function updatePhysics(dt){
-  if(mode !== 'host') return;
-  if(!ball.held){
-    ball.x += ball.vx * dt;
-    ball.y += ball.vy * dt;
-    ball.vy += 200 * dt; // gravity-ish
-    // bounce walls
-    if(ball.x < ball.r){ ball.x = ball.r; ball.vx *= -0.8; }
-    if(ball.x > W - ball.r){ ball.x = W - ball.r; ball.vx *= -0.8; }
-    if(ball.y < ball.r){ ball.y = ball.r; ball.vy *= -0.8; }
-    if(ball.y > H - ball.r){ ball.y = H - ball.r; ball.vy *= -0.8; }
-  }
-
-  // collision with paddles
-  for(const pid in paddles){
-    const p = paddles[pid];
-    if(ball.x + ball.r > p.x - p.w/2 && ball.x - ball.r < p.x + p.w/2 &&
-       ball.y + ball.r > p.y - p.h/2 && ball.y - ball.r < p.y + p.h/2){
-      // simple reflect
-      ball.vy = -Math.abs(ball.vy) - 120;
-      ball.vx += (ball.x - p.x) * 0.1;
-      // notify that a hit occurred
-      broadcast({type:'hit', by: pid, x: ball.x, y: ball.y});
-    }
-  }
-
-  // periodically broadcast authoritative ball state
-  broadcast({type:'ball', x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy, held: ball.held});
-}
-
-// Broadcast to all clients (host)
-function broadcast(msg){
-  const s = JSON.stringify(msg);
-  for(const k in connections){
-    const c = connections[k];
-    if(c.open) try{ c.send(s); } catch(e){ /*ignore*/ }
-  }
-}
-
-// Send from client to host
-function sendToHost(msg){
-  if(conn && conn.open) conn.send(JSON.stringify(msg));
-}
-
-// --- PeerJS high-level setup ---
-async function ensurePeerJS(){
-  if(window.Peer) return;
-  // using peerjs from CDN
-  await loadScript('https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js');
-  log('PeerJS cargado');
-}
-
-// Create peer (both host and client)
-async function createPeer(){
-  await ensurePeerJS();
-  return new Promise((res,rej)=>{
-    // Default PeerJS options use peerjs broker server. You can set key/host/port for custom broker.
-    const p = new Peer(); // public broker
-    p.on('open', id => { log('Peer open: ' + id); res(p); });
-    p.on('error', err => { log('Peer error: ' + err); setStatus('error'); rej(err); });
-  });
-}
-
-// --- Host flow ---
-async function startHost(){
-  mode = 'host';
-  setStatus('iniciando host...');
-  peer = await createPeer();
-  myIdEl.textContent = peer.id;
-  peer.on('connection', c => {
-    log('Cliente conectado: ' + c.peer);
-    connections[c.peer] = c;
-    c.on('data', d => onMessageFromClient(c.peer, d));
-    c.on('close', ()=>{ delete connections[c.peer]; delete paddles[c.peer]; log('Cliente desconectado: '+c.peer); peerIdEl.textContent = '-'; });
-    c.on('open', ()=> {
-      // init paddle entry
-      paddles[c.peer] = { x: W/2, y: H-40, w: 100, h: 14, color: colorFor(c.peer) };
-      // send welcome and current ball state
-      try{ c.send(JSON.stringify({type:'welcome', id:peer.id})); }catch(e){}
-    });
-  });
-  peer.on('disconnected', ()=> log('Peer disconnected'));
-  setStatus('host listo');
-  myIdEl.textContent = peer.id;
-  startLoop();
-}
-
-// --- Client flow ---
-async function startClientFlow(){
-  mode = 'client';
-  setStatus('creando peer...');
-  peer = await createPeer();
-  myIdEl.textContent = peer.id;
-  setStatus('esperando ID del host...');
-  const hostId = prompt('Introduce el ID del host (copiado desde la consola):');
-  if(!hostId){ setStatus('cancelado'); return; }
-  setStatus('conectando a host ' + hostId);
-  const c = peer.connect(hostId);
-  c.on('open', ()=> {
-    log('Conectado al host ' + hostId);
-    conn = c;
-    peerIdEl.textContent = hostId;
-    // create local paddle
-    paddles[peer.id] = { x: W/2, y: H-40, w: 120, h: 14, color: colorFor(peer.id) };
-    c.on('data', d => onMessageFromHost(d));
-    c.on('close', ()=>{ log('Conexión cerrada'); setStatus('desconectado'); });
-    setStatus('conectado a host');
-  });
-  c.on('error', e => { log('Conn error: '+e); setStatus('error'); });
-  startLoop();
-}
-
-// --- Message handlers ---
-function onMessageFromClient(peerId, raw){
-  let msg;
-  try{ msg = typeof raw === 'string' ? JSON.parse(raw) : raw; }catch(e){ return; }
-  if(msg.type === 'paddle'){
-    // update paddle from client
-    paddles[peerId] = paddles[peerId] || { x: W/2, y: H-40, w: 100, h: 14, color: colorFor(peerId) };
-    paddles[peerId].x = msg.x;
-    paddles[peerId].y = msg.y;
-  } else if(msg.type === 'chat'){
-    log(`msg de ${peerId}: ${msg.text}`);
-  }
-}
-
-function onMessageFromHost(raw){
-  let msg;
-  try{ msg = typeof raw === 'string' ? JSON.parse(raw) : raw; }catch(e){ return; }
-  if(msg.type === 'ball'){
-    // client updates local ball state
-    ball.x = msg.x; ball.y = msg.y; ball.vx = msg.vx; ball.vy = msg.vy; ball.held = msg.held;
-  } else if(msg.type === 'welcome'){
-    log('Welcome from host: ' + msg.id);
-  } else if(msg.type === 'hit'){
-    // visual effect: small flash
-    flash();
-    log('Hit by ' + msg.by);
-  }
-}
-
-// small flash on hit
-let flashT = 0;
-function flash(){ flashT = 0.2; }
-function drawFlash(dt){
-  if(flashT <= 0) return;
-  flashT -= dt;
-  ctx.fillStyle = `rgba(255,230,120,${flashT*2})`;
-  ctx.fillRect(0,0,W,H);
-}
-
-// --- Input handling ---
-let mouseDown = false;
-canvas.addEventListener('mousedown', e => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left, y = e.clientY - rect.top;
-  if(mode === 'host'){
-    // if mouse close to ball, pick it up
-    const dx = x - ball.x, dy = y - ball.y;
-    if(Math.hypot(dx,dy) <= ball.r + 6){ ball.held = true; mouseDown = true; }
-  } else if(mode === 'client'){
-    mouseDown = true;
-  }
-});
-canvas.addEventListener('mouseup', e => {
-  mouseDown = false;
-  if(mode === 'host' && ball.held){
-    ball.held = false;
-    // throw ball with some velocity
-    ball.vx = (Math.random()-0.5)*200;
-    ball.vy = -200;
-  }
-});
-canvas.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left, y = e.clientY - rect.top;
-  if(mode === 'host' && mouseDown && ball.held){
-    ball.x = x; ball.y = y;
-  }
-  // client moving paddle
-  if(mode === 'client' && paddles[peer?.id]){
-    paddles[peer.id].x = x;
-    // send paddle update to host (throttle)
-    throttleSendPaddle();
-  }
-});
-
-// space to launch ball when host
-window.addEventListener('keydown', e => {
-  if(e.code === 'Space' && mode === 'host'){
-    ball.held = false;
-    ball.vx = (Math.random()-0.5)*200; ball.vy = -220;
-  }
-});
-
-// throttle paddle sends
-let lastPaddleSent = 0;
-function throttleSendPaddle(){
-  const now = performance.now();
-  if(now - lastPaddleSent < 40) return;
-  lastPaddleSent = now;
-  const p = paddles[peer.id];
-  if(!p) return;
-  sendToHost({type:'paddle', x: p.x, y: p.y});
-}
-
-// --- Main loop ---
-let last = performance.now();
-function startLoop(){
-  last = performance.now();
-  requestAnimationFrame(tick);
-}
-function tick(ts){
-  const dt = (ts - last)/1000; last = ts;
-  if(mode === 'host') updatePhysics(dt);
-  draw();
-  drawFlash(dt);
-  requestAnimationFrame(tick);
-}
-
-// --- UI buttons ---
-id('startHost').addEventListener('click', async ()=>{
-  if(mode !== 'idle'){ alert('Ya iniciado'); return; }
-  try{ await startHost(); } catch(e){ log('No se pudo iniciar host: '+e); }
-});
-id('startClient').addEventListener('click', async ()=>{
-  if(mode !== 'idle'){ alert('Ya iniciado'); return; }
-  try{ await startClientFlow(); } catch(e){ log('No se pudo conectar: '+e); }
-});
-
-// --- clean unload ---
-window.addEventListener('beforeunload', ()=>{ try{ peer && peer.destroy(); }catch(e){} });
-
+const MASTER_HOST_CODE='#FFHUDT6O3jNZXFRdPo7eP';const NUMBERS=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];const ROOM={hostCode:MASTER_HOST_CODE,codes:{players:{},admins:{},reconnect:{}},players:{},admins:{},bets:[],round:{num:0,state:'idle',timer:0,duration:45,forcedNumber:null},history:[],alerts:[],bonus:{mult:1,roundsLeft:0}};let localSession={role:null,id:null,playerId:null,code:null,peer:null,conn:null,isHostPeer:false};const $=id=>document.getElementById(id);const uid=(p='id')=>`${p}_${Math.random().toString(36).slice(2,10)}`;function log(msg){const L=$('logs');const d=document.createElement('div');d.textContent=`${new Date().toLocaleTimeString()} - ${msg}`;L.appendChild(d);L.scrollTop=L.scrollHeight;}const hostPanel=$('hostPanel'),adminPanel=$('adminPanel'),loginArea=$('loginArea');const hostCodesEl=$('hostCodes'),hostPlayersEl=$('hostPlayers'),adminPlayersEl=$('adminPlayers');const adminAlertsEl=$('adminAlerts'),playersSide=$('playersSide'),logsEl=$('logs');const codeInput=$('codeInput'),enterBtn=$('enterBtn'),demoHostBtn=$('demoHostBtn'),demoAdminBtn=$('demoAdminBtn'),demoPlayerBtn=$('demoPlayerBtn');const genPlayerCodeBtn=$('genPlayerCode'),genAdminCodeBtn=$('genAdminCode'),genReconnectBtn=$('genReconnect');const startRoundBtn=$('startRoundBtn'),roundNumEl=$('roundNum'),roundTimerEl=$('roundTimer'),centerResult=$('centerResult');const adminForceNumberBtn=$('adminForceNumber'),adminForceWinManyBtn=$('adminForceWinMany'),adminForceLoseManyBtn=$('adminForceLoseMany');const bonusSelect=$('bonusSelect'),bonusRounds=$('bonusRounds'),applyBonusBtn=$('applyBonus');const betBoard=$('betBoard'),hostIdEl=$('hostId'),sessionInfo=$('sessionInfo'),adminId=$('adminId');function hostPeerIdFromCode(code){return 'host-'+btoa(code).replace(/=/g,'').slice(0,28);}function createPeerAsHost(hostCode){const peerId=hostPeerIdFromCode(hostCode);try{const peer=new Peer(peerId,{debug:0});peer.on('open',id=>{localSession.peer=peer;localSession.isHostPeer=true;sessionInfo.textContent=`Host peer: ${id}`;hostIdEl.textContent=id;log('PeerJS host listo: '+id);peer.on('connection',conn=>{setupHostConnection(conn);});});peer.on('error',err=>{log('Peer error: '+err);});return peer;}catch(e){console.warn('Peer creation failed',e);return null;}}function createPeerAsClient(){try{const peer=new Peer(undefined,{debug:0});peer.on('open',id=>{localSession.peer=peer;sessionInfo.textContent=`Peer: ${id}`;log('PeerJS cliente listo: '+id);});peer.on('error',err=>{log('Peer error: '+err);});return peer;}catch(e){console.warn('Peer create fail',e);return null;}}function setupHostConnection(conn){const peerId=conn.peer;conn.on('data',data=>{try{const msg=data;if(msg.t==='join'){const role=msg.role,name=msg.name,code=msg.code;if(role==='player'&&ROOM.codes.players[code]&&!ROOM.codes.players[code].used){const pid=uid('p');ROOM.players[pid]={id:pid,name:sanitizeName(name),chips:1000,peer:peerId};ROOM.codes.players[code].used=true;conn.send({t:'join-ack',ok:true,assignedId:pid,players:Object.values(ROOM.players).map(p=>({id:p.id,name:p.name,chips:p.chips}))});broadcastToAll({t:'new-player',id:pid,name:ROOM.players[pid].name,chips:ROOM.players[pid].chips});refreshHostCodes();refreshHostPlayers();refreshPlayersSide();log(`${name} conectado como player (${pid}) via ${peerId}`);}else if(role==='admin'&&ROOM.codes.admins[code]&&!ROOM.codes.admins[code].used){const aid=uid('a');ROOM.admins[aid]={id:aid,name:sanitizeName(name),peer:peerId};ROOM.codes.admins[code].used=true;conn.send({t:'join-ack',ok:true,assignedId:aid});broadcastToAll({t:'admin-joined',id:aid,name:ROOM.admins[aid].name});refreshHostCodes();refreshAdminPlayers();log(`${name} conectado como admin (${aid}) via ${peerId}`);}else{conn.send({t:'join-ack',ok:false,reason:'Código inválido o usado'});} }else if(msg.t==='bet'){const b={id:uid('b'),playerId:msg.playerId,cell:msg.cell,amount:msg.amount,round:ROOM.round.num};const p=ROOM.players[msg.playerId];if(!p){conn.send({t:'bet-reject',reason:'Jugador no existe'});return;}if(msg.amount>p.chips){ROOM.alerts.push({id:uid('al'),msg:`${p.name} intentó apostar ${msg.amount} > ${p.chips}`,roundsLeft:2});b.amount=p.chips;}ROOM.bets.push(b);p.chips-=b.amount;broadcastToAll({t:'bet-accepted',bet:b,playerName:p.name});refreshHostPlayers();refreshPlayersSide();updateBetTags();log(`Apuesta: ${p.name} → ${b.cell} : ${b.amount}`);}else if(msg.t==='admin-cmd'){if(msg.cmd==='force-number'){ROOM.round.forcedNumber=msg.number;log('Admin forzó número '+msg.number);broadcastToAll({t:'alert',text:`Admin forzó número ${msg.number}`});}if(msg.cmd==='apply-bonus'){ROOM.bonus.mult=msg.mult;ROOM.bonus.roundsLeft=msg.rounds;broadcastToAll({t:'alert',text:`Bonus x${msg.mult} por ${msg.rounds} rondas`});}}}catch(e){console.warn('host conn data error',e);}});conn.on('close',()=>{log('conn closed: '+peerId);});}function broadcastToAll(message){if(!localSession.isHostPeer||!localSession.peer)return;localSession.peer.connections&&Object.values(localSession.peer.connections).forEach(conns=>{conns.forEach(c=>{try{c.send(message);}catch(e){});});}function becomeLocalHost(){localSession.role='host';localSession.id=uid('host');localSession.isHostPeer=false;hostIdEl.textContent='LOCAL-HOST';sessionInfo.textContent='Modo: local (sin PeerServer)';renderUIByRole();log('Modo local: host activo');}function genCodePlayer(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';let c='';for(let i=0;i<12;i++)c+=chars[Math.floor(Math.random()*chars.length)];const code=c.slice(0,12);ROOM.codes.players[code]={code,type:'player',used:false,createdAt:Date.now()};refreshHostCodes();return code;}function genCodeAdmin(){const code=String(Math.floor(10000000+Math.random()*90000000));ROOM.codes.admins[code]={code,type:'admin',used:false,createdAt:Date.now()};refreshHostCodes();return code;}function genCodeReconnect(){const code=uid('reco').slice(5);ROOM.codes.reconnect[code]={code,type:'reconnect',used:false,createdAt:Date.now()};refreshHostCodes();return code;}function refreshHostCodes(){hostCodesEl.innerHTML='';function makeItem(c,type){const div=document.createElement('div');div.className='code-item';const left=document.createElement('div');left.style.display='flex';left.style.gap='10px';left.style.alignItems='center';const badge=document.createElement('div');badge.style.width='36px';badge.style.height='36px';badge.style.borderRadius='8px';badge.style.display='flex';badge.style.alignItems='center';badge.style.justifyContent='center';badge.style.color='white';badge.style.fontWeight='800';badge.style.background=type==='admin'?'linear-gradient(90deg,#FFC66A,#FF9DC7)':'linear-gradient(90deg,#7ED7FF,#FF6B9A)';badge.textContent=type==='admin'?'A':'P';left.appendChild(badge);const txt=document.createElement('div');txt.style.fontWeight='800';txt.textContent=c;left.appendChild(txt);const meta=document.createElement('div');meta.style.fontSize='12px';meta.style.color='var(--muted)';meta.textContent=type;left.appendChild(meta);div.appendChild(left);const right=document.createElement('div');const cp=document.createElement('button');cp.className='copy-btn';cp.textContent='Copiar';cp.dataset.code=c;cp.addEventListener('click',e=>{navigator.clipboard?.writeText(c).then(()=>{toast('Copiado: '+c);});});right.appendChild(cp);div.appendChild(right);hostCodesEl.appendChild(div);}Object.keys(ROOM.codes.players).forEach(c=>makeItem(c,'player'));Object.keys(ROOM.codes.admins).forEach(c=>makeItem(c,'admin'));Object.keys(ROOM.codes.reconnect).forEach(c=>makeItem(c,'reconnect'));}function refreshHostPlayers(){hostPlayersEl.innerHTML='';Object.values(ROOM.players).forEach(p=>{const div=document.createElement('div');div.style.display='flex';div.style.justifyContent='space-between';div.style.padding='10px';div.style.borderRadius='8px';div.style.border='1px solid #f0f3f5';div.style.marginBottom='6px';div.innerHTML=`<div style="display:flex;gap:10px;align-items:center"><div style="width:36px;height:36;border-radius:8px;background:#eef7ff;display:flex;align-items:center;justify-content:center;font-weight:800">${(p.name||'P').slice(0,1)}</div><div><div style="font-weight:800">${p.name}</div><div style="font-size:12px;color:var(--muted)">Fichas: ${p.chips}</div></div></div><div style="display:flex;gap:6px"><button class="small-btn" data-edit="${p.id}">Editar</button><button class="small-btn" data-kick="${p.id}">Expulsar</button></div>`;hostPlayersEl.appendChild(div);div.querySelector('[data-edit]')?.addEventListener('click',()=>openEditPlayerModal(p.id));div.querySelector('[data-kick]')?.addEventListener('click',()=>{delete ROOM.players[p.id];refreshHostPlayers();refreshPlayersSide();toast(`${p.name} expulsado`);});});}function refreshAdminPlayers(){adminPlayersEl.innerHTML='';Object.values(ROOM.players).forEach(p=>{const div=document.createElement('div');div.style.display='flex';div.style.justifyContent='space-between';div.style.padding='10px';div.style.borderRadius='8px';div.style.border='1px solid #f0f3f5';div.style.marginBottom='6px';div.innerHTML=`<div style="display:flex;gap:10px;align-items:center"><div style="width:36px;height:36;border-radius:8px;background:#fff7ef;display:flex;align-items:center;justify-content:center;font-weight:800">${(p.name||'P').slice(0,1)}</div><div><div style="font-weight:800">${p.name}</div><div style="font-size:12px;color:var(--muted)">Fichas: ${p.chips}</div></div></div><div style="display:flex;gap:6px"><button class="small-btn" data-add="${p.id}">+F</button><button class="small-btn" data-rem="${p.id}">-F</button><button class="small-btn" data-kick="${p.id}">Expulsar</button></div>`;adminPlayersEl.appendChild(div);div.querySelector('[data-add]')?.addEventListener('click',()=>{ROOM.players[p.id].chips+=100;refreshAdminPlayers();refreshHostPlayers();refreshPlayersSide();});div.querySelector('[data-rem]')?.addEventListener('click',()=>{ROOM.players[p.id].chips=Math.max(0,ROOM.players[p.id].chips-100);refreshAdminPlayers();refreshHostPlayers();refreshPlayersSide();});div.querySelector('[data-kick]')?.addEventListener('click',()=>{delete ROOM.players[p.id];refreshAdminPlayers();refreshHostPlayers();refreshPlayersSide();toast(`${p.name} expulsado`);});});}function refreshPlayersSide(){playersSide.innerHTML='';Object.values(ROOM.players).forEach(p=>{const row=document.createElement('div');row.style.display='flex';row.style.justifyContent='space-between';row.style.marginBottom='6px';row.innerHTML=`<div style="font-weight:800">${p.name}</div><div style="color:var(--muted)">${p.chips}</div>`;playersSide.appendChild(row);});}
+function handleEnterCode(raw){const code=(raw||'').trim();if(!code){toast('Ingresa código');return;}if(code===ROOM.hostCode){localSession.role='host';localSession.code=code;const peer=createPeerAsHost(code);if(!peer){becomeLocalHost();}renderUIByRole();return;}if(ROOM.codes.players[code]&&!ROOM.codes.players[code].used){askName(name=>{attemptClientJoin('player',name,code);});return;}if(ROOM.codes.admins[code]&&!ROOM.codes.admins[code].used){askName(name=>{attemptClientJoin('admin',name,code);});return;}if(ROOM.codes.reconnect[code]&&!ROOM.codes.reconnect[code].used){ROOM.codes.reconnect[code].used=true;localSession.role='player';localSession.id=uid('p_reco');renderUIByRole();toast('Reconexión demo usada');return;}toast('Código inválido o usado');}
+function attemptClientJoin(role,name,code){const hostPeerId=hostPeerIdFromCode(ROOM.hostCode);let peer=localSession.peer;if(!peer)peer=createPeerAsClient();const connectToHost=()=>{try{const conn=peer.connect(hostPeerId,{reliable:true});conn.on('open',()=>{conn.send({t:'join',role,name,code});conn.on('data',data=>{if(data.t==='join-ack'){if(data.ok){if(role==='player'){localSession.role='player';localSession.playerId=data.assignedId;localSession.conn=conn;localSession.id=data.assignedId;renderUIByRole();refreshPlayersSide();toast('Conectado como jugador: '+name);}else if(role==='admin'){localSession.role='admin';localSession.id=data.assignedId;localSession.conn=conn;renderUIByRole();refreshAdminPlayers();toast('Conectado como admin: '+name);}}else{toast('Rechazado: '+(data.reason||''));}}else if(data.t==='new-player'){ROOM.players[data.id]={id:data.id,name:data.name,chips:data.chips};refreshPlayersSide();}else if(data.t==='bet-accepted'){ROOM.bets.push(data.bet);updateBetTags();}else if(data.t==='alert'){log('ALERTA: '+data.text);}});});conn.on('error',()=>{doLocalJoin(role,name,code);});}catch(e){doLocalJoin(role,name,code);} };if(peer&&peer.open)connectToHost();else{peer.on('open',connectToHost);} }
+function doLocalJoin(role,name,code){if(role==='player'){const pid=uid('p');ROOM.players[pid]={id:pid,name:sanitizeName(name),chips:1000};ROOM.codes.players[code].used=true;localSession.role='player';localSession.playerId=pid;localSession.id=pid;renderUIByRole();refreshHostPlayers();refreshPlayersSide();refreshHostCodes();toast('Conectado local: '+name);}else if(role==='admin'){const aid=uid('a');ROOM.admins[aid]={id:aid,name:sanitizeName(name)};ROOM.codes.admins[code]=ROOM.codes.admins[code]||{code,used:false};ROOM.codes.admins[code].used=true;localSession.role='admin';localSession.id=aid;renderUIByRole();refreshAdminPlayers();refreshHostCodes();toast('Admin local: '+name);} }
+const modalOverlay=$('modalOverlay'),modalContentEl=$('modalContent');function showModal(html){modalContentEl.innerHTML=html;modalOverlay.style.display='flex';modalOverlay.setAttribute('aria-hidden','false');}
+function hideModal(){modalOverlay.style.display='none';modalOverlay.setAttribute('aria-hidden','true');modalContentEl.innerHTML='';}
+modalOverlay.addEventListener('click',e=>{if(e.target===modalOverlay)hideModal();});
+function askName(cb){showModal(`<div style="font-weight:900">Nombre</div><input id="modalNameInput" class="input" style="margin-top:8px"/><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button id="modalCancel" class="small-btn">Cancelar</button><button id="modalOk" class="btn">OK</button></div>`);
+modalContentEl.querySelector('#modalCancel').addEventListener('click',hideModal);
+modalContentEl.querySelector('#modalOk').addEventListener('click',()=>{const v=modalContentEl.querySelector('#modalNameInput').value||'Player';hideModal();cb(v);});setTimeout(()=>modalContentEl.querySelector('#modalNameInput')?.focus(),50);}function renderUIByRole(){hostPanel.style.display='none';adminPanel.style.display='none';if(localSession.role==='host'){hostPanel.style.display='block';refreshHostCodes();refreshHostPlayers();}else if(localSession.role==='admin'){adminPanel.style.display='block';adminId.textContent=ROOM.admins[localSession.id]?.name||'ADMIN';refreshAdminPlayers();refreshAdminAlerts();}else if(localSession.role==='player'){}
+refreshPlayersSide();}
+function attachLongPress(cellEl){let tId=null,started=false;function start(e){if(localSession.role!=='player'){toast('Conéctate como jugador');return;}if(ROOM.round.state!=='running'){toast('Ronda no iniciada');return;}started=true;tId=setTimeout(()=>{if(!started)return;openBetModal(cellEl.dataset.type,cellEl.dataset.value);},1500);}function cancel(){started=false;if(tId){clearTimeout(tId);tId=null;}}cellEl.addEventListener('pointerdown',start);cellEl.addEventListener('pointerup',cancel);cellEl.addEventListener('pointercancel',cancel);cellEl.addEventListener('mousedown',start);cellEl.addEventListener('mouseup',cancel);cellEl.addEventListener('touchstart',start);cellEl.addEventListener('touchend',cancel);cellEl.addEventListener('touchcancel',cancel);cellEl.setAttribute('tabindex','0');cellEl.addEventListener('keydown',(ev)=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();openBetModal(cellEl.dataset.type,cellEl.dataset.value);}})}function buildBetBoard(){betBoard.innerHTML='';for(let n=0;n<=12;n++){const div=document.createElement('div');div.className='bet-cell';div.dataset.type='number';div.dataset.value=String(n);div.innerHTML=`<div style="font-weight:900">${n}</div><div class="bet-amount" data-for="${n}">0</div>`;betBoard.appendChild(div);attachLongPress(div);}const doc=document.createElement('div');doc.className='bet-cell';doc.dataset.type='group';doc.dataset.value='1-12';doc.innerHTML=`<div style="font-weight:900">Docena 1-12</div><div class="bet-amount" data-for="1-12">0</div>`;betBoard.appendChild(doc);attachLongPress(doc);}function openBetModal(type,value){if(localSession.role!=='player'||!localSession.playerId){toast('No estás conectado como jugador');return;}const p=ROOM.players[localSession.playerId];const html=`<div style="font-weight:900">Apostar: ${value}</div><input id="betAmount" class="input" placeholder="Cantidad (fichas: ${p.chips})" style="margin-top:8px" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button id="cancelBet" class="small-btn">❌</button><button id="confirmBet" class="btn">✔️</button></div>`;showModal(html);modalContentEl.querySelector('#cancelBet').addEventListener('click',hideModal);modalContentEl.querySelector('#confirmBet').addEventListener('click',()=>{let amount=Math.floor(Number(modalContentEl.querySelector('#betAmount').value)||0);if(amount<=0){toast('Cantidad inválida');return;}if(localSession.conn){localSession.conn.send({t:'bet',playerId:localSession.playerId,cell:value,amount});}else if(localSession.peer&&!localSession.isHostPeer){const hostPeerId=hostPeerIdFromCode(ROOM.hostCode);try{const tempConn=localSession.peer.connect(hostPeerId);tempConn.on('open',()=>{tempConn.send({t:'bet',playerId:localSession.playerId,cell:value,amount});tempConn.close();});}catch(e){doLocalBet(localSession.playerId,value,amount);}}else{doLocalBet(localSession.playerId,value,amount);}hideModal();});setTimeout(()=>modalContentEl.querySelector('#betAmount')?.focus(),50);}function doLocalBet(playerId,cell,amount){const p=ROOM.players[playerId];if(!p){toast('Jugador no encontrado');return;}if(amount>p.chips){ROOM.alerts.push({id:uid('al'),msg:`${p.name} intentó apostar ${amount} > ${p.chips}`,roundsLeft:2});amount=p.chips;toast('Ajustada a fichas; alerta generada');}const bet={id:uid('b'),playerId,cell,amount,round:ROOM.round.num};ROOM.bets.push(bet);p.chips-=amount;updateBetTags();refreshHostPlayers();refreshPlayersSide();toast(`Apuesta local: ${p.name} → ${cell} : ${amount}`);}function updateBetTags(){document.querySelectorAll('.bet-tag').forEach(n=>n.remove());const perCell={};ROOM.bets.filter(b=>b.round===ROOM.round.num).forEach(b=>{perCell[b.cell]=perCell[b.cell]||[];perCell[b.cell].push(`${ROOM.players[b.playerId]?.name||'P'}:${b.amount}`)});Object.keys(perCell).forEach(cell=>{const el=document.querySelector(`.bet-cell[data-value="${cell}"]`);if(el){const tag=document.createElement('div');tag.className='bet-tag';tag.textContent=perCell[cell].slice(0,3).join(' | ');el.appendChild(tag);const sum=ROOM.bets.filter(b=>b.round===ROOM.round.num&&b.cell===cell).reduce((s,x)=>s+x.amount,0);const amtEl=el.querySelector(`.bet-amount[data-for="${cell}"]`);if(amtEl)amtEl.textContent=sum;}})
+let roundInterval=null;function startRound(){if(ROOM.round.state==='running')return;ROOM.round.num+=1;ROOM.round.state='running';ROOM.round.timer=ROOM.round.duration;roundNumEl.textContent=ROOM.round.num;roundTimerEl.textContent=ROOM.round.timer;roundInterval&&clearInterval(roundInterval);roundInterval=setInterval(()=>{ROOM.round.timer-=1;roundTimerEl.textContent=ROOM.round.timer;if(ROOM.round.timer<=0){clearInterval(roundInterval);roundInterval=null;beginSpinPhase()}},1000);if(localSession.isHostPeer)broadcastToAll({t:'start-round',round:ROOM.round.num,duration:ROOM.round.duration});toast('Ronda iniciada')}function beginSpinPhase(){ROOM.round.state='spinning';const chosen=(ROOM.round.forcedNumber!==null)?Number(ROOM.round.forcedNumber):NUMBERS[Math.floor(Math.random()*NUMBERS.length)];spinReelsToNumber(chosen).then(num=>{centerResult.textContent=String(num);setTimeout(()=>{resolveBets(num);ROOM.round.forcedNumber=null;ROOM.round.state='idle';if(ROOM.bonus.roundsLeft>0){ROOM.bonus.roundsLeft-=1;if(ROOM.bonus.roundsLeft===0)ROOM.bonus.mult=1}ROOM.alerts.forEach(a=>a.roundsLeft=Math.max(0,a.roundsLeft-1));ROOM.alerts=ROOM.alerts.filter(a=>a.roundsLeft>0);refreshAdminAlerts();updateBetTags()},2000)}).catch(err=>{toast('Error en spin');ROOM.round.state='idle'})}function resolveBets(resultNum){const payouts=[];ROOM.bets.filter(b=>b.round===ROOM.round.num).forEach(b=>{let won=false,payout=0;if(b.cell===String(resultNum)){won=true;payout=b.amount*35}else if(b.cell==='1-12'){const r=Number(resultNum);if(r>=1&&r<=12){won=true;payout=b.amount*2}}if(won){const player=ROOM.players[b.playerId];if(player){const finalPayout=Math.floor(payout*ROOM.bonus.mult);player.chips+=finalPayout;payouts.push({player:player.name,amount:finalPayout})}}});ROOM.history.push(`R${ROOM.round.num}: ${resultNum}`);if(payouts.length)ROOM.history.push('Payouts: '+payouts.map(p=>`${p.player}+${p.amount}`).join(', '));else ROOM.history.push('Nadie ganó esta ronda');toast(`R${ROOM.round.num} → ${resultNum}`);refreshHostPlayers();refreshPlayersSide();refreshAdminPlayers()}
+adminForceNumberBtn.addEventListener('click',()=>{if(localSession.role!=='admin')return toast('Solo admins');showModal(`<div style="font-weight:900">Forzar Nº</div><input id="forceNumInput" class="input" placeholder="0-36" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button id="cancelForce" class="small-btn">Cancelar</button><button id="okForce" class="btn">OK</button></div>`);
+modalContentEl.querySelector('#cancelForce').addEventListener('click',hideModal);
+modalContentEl.querySelector('#okForce').addEventListener('click',()=>{const v=Number(modalContentEl.querySelector('#forceNumInput').value);if(Number.isNaN(v)||v<0||v>36){toast('Número inválido');return}ROOM.round.forcedNumber=v;hideModal();toast(`Forzado: ${v}`)})});adminForceWinManyBtn.addEventListener('click',()=>{if(localSession.role!=='admin')return toast('Solo admins');showModal(`<div style="font-weight:900">Forzar ganadores N</div><input id="forceN" class="small-input" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button id="cancelF" class="small-btn">Cancelar</button><button id="okF" class="btn">OK</button></div>`);
+modalContentEl.querySelector('#cancelF').addEventListener('click',hideModal);
+modalContentEl.querySelector('#okF').addEventListener('click',()=>{const n=Math.max(1,parseInt(modalContentEl.querySelector('#forceN').value)||1);hideModal();const betCounts={};ROOM.bets.filter(b=>b.round===ROOM.round.num).forEach(b=>betCounts[b.playerId]=(betCounts[b.playerId]||0)+b.amount);const top=Object.keys(betCounts).sort((a,b)=>betCounts[b]-betCounts[a]).slice(0,n);let forced=null;for(const pid of top){const numericBet=ROOM.bets.find(b=>b.playerId===pid&&b.round===ROOM.round.num&&/^\d+$/.test(b.cell));if(numericBet){forced=Number(numericBet.cell);break}}if(forced!==null){ROOM.round.forcedNumber=forced;toast('Forzado: '+forced)}else toast('Sin apuestas numéricas')})});adminForceLoseManyBtn.addEventListener('click',()=>{if(localSession.role!=='admin')return toast('Solo admins');showModal(`<div style="font-weight:900">Forzar pérdida N</div><input id="forceN2" class="small-input" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button id="cancelF2" class="small-btn">Cancelar</button><button id="okF2" class="btn">OK</button></div>`);
+modalContentEl.querySelector('#cancelF2').addEventListener('click',hideModal);
+modalContentEl.querySelector('#okF2').addEventListener('click',()=>{const n=Math.max(1,parseInt(modalContentEl.querySelector('#forceN2').value)||1);hideModal();const betCounts={};ROOM.bets.filter(b=>b.round===ROOM.round.num).forEach(b=>betCounts[b.playerId]=(betCounts[b.playerId]||0)+b.amount);const top=Object.keys(betCounts).sort((a,b)=>betCounts[b]-betCounts[a]).slice(0,n);const nums=new Set(ROOM.bets.filter(b=>top.includes(b.playerId)&&/^\d+$/.test(b.cell)).map(b=>Number(b.cell)));let forced=null;for(const num of NUMBERS){if(!nums.has(num)){forced=num;break}}if(forced!==null){ROOM.round.forcedNumber=forced;toast('Forzado: '+forced)}else toast('No fue posible')});});applyBonusBtn.addEventListener('click',()=>{if(localSession.role!=='admin')return toast('Solo admins');const mult=Number(bonusSelect.value);const rounds=Math.max(1,parseInt(bonusRounds.value)||1);if(!mult||mult<=1){toast('Selecciona multiplicador');return}ROOM.bonus.mult=mult;ROOM.bonus.roundsLeft=rounds;toast(`Bonus x${mult} por ${rounds} rondas`)});function openEditPlayerModal(pid){const p=ROOM.players[pid];if(!p)return;showModal(`<div style="font-weight:900">${p.name}</div><div style="margin-top:8px">Fichas: <input id="editChips" class="small-input" style="width:120px" value="${p.chips}" /></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button id="cancelEdit" class="small-btn">Cancelar</button><button id="saveEdit" class="btn">Guardar</button></div>`);
+modalContentEl.querySelector('#cancelEdit').addEventListener('click',hideModal);
+modalContentEl.querySelector('#saveEdit').addEventListener('click',()=>{const val=parseInt(modalContentEl.querySelector('#editChips').value)||0;ROOM.players[pid].chips=Math.max(0,val);hideModal();refreshHostPlayers();refreshPlayersSide();renderUIByRole();toast('Jugador actualizado')});}
+function refreshAdminAlerts(){adminAlertsEl.innerHTML='';ROOM.alerts.forEach(a=>{const d=document.createElement('div');d.textContent=a.msg;adminAlertsEl.appendChild(d);});}
+function toast(msg){log(msg);centerResult.textContent=msg;centerResult.style.fontSize='12px';setTimeout(()=>{centerResult.style.fontSize='16px';centerResult.textContent=(ROOM.round.state==='spinning'?'...':(ROOM.round.state==='running'?`${ROOM.round.timer}s`:'—'));},2000)}enterBtn.addEventListener('click',()=>handleEnterCode(codeInput.value));demoHostBtn.addEventListener('click',()=>{codeInput.value=MASTER_HOST_CODE;handleEnterCode(MASTER_HOST_CODE)});demoAdminBtn.addEventListener('click',()=>{const c=genCodeAdmin();codeInput.value=c;handleEnterCode(c)});demoPlayerBtn.addEventListener('click',()=>{const c=genCodePlayer();codeInput.value=c;handleEnterCode(c)});genPlayerCodeBtn.addEventListener('click',()=>{const c=genCodePlayer();toast('Jugador creado: '+c)});genAdminCodeBtn.addEventListener('click',()=>{const c=genCodeAdmin();toast('Admin creado: '+c)});genReconnectBtn.addEventListener('click',()=>{const c=genCodeReconnect();toast('Reconexión: '+c)});startRoundBtn.addEventListener('click',()=>{if(localSession.role!=='host')return toast('Solo host');startRound()});paper.setup('paperCanvas');const view=paper.view;let reelsGroup=new paper.Group();reelsGroup.position=view.center;const reelCount=3;let reelItems=[];let reelWidth=Math.min(view.size.width*0.28,200);let reelHeight=Math.min(view.size.height*0.85,300);const visiblePerReel=5;let symbolHeight=Math.floor(reelHeight/visiblePerReel);function makeSymbol(number,sizeW,sizeH){const group=new paper.Group();const rect=new paper.Path.Rectangle(new paper.Point(-sizeW/2,-sizeH/2),new paper.Size(sizeW,sizeH));rect.radius=10;let fill;if(number===0)fill=new paper.Color(0.06,0.08,0.12);else{const redSet=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);fill=redSet.has(number)?new paper.Color(0.82,0.12,0.18):new paper.Color(0.07,0.07,0.08)}rect.fillColor=fill;rect.strokeColor=new paper.Color(0.95,0.95,0.98);rect.strokeWidth=1.2;group.addChild(rect);const txt=new paper.PointText({point:new paper.Point(0,Math.round(sizeH*0.12)),content:String(number),justification:'center',fillColor:'white',fontFamily:'Inter, Arial, sans-serif',fontWeight:'800',fontSize:Math.max(18,Math.floor(sizeH*0.42))});group.addChild(txt);return group}function buildReels(){reelItems=[];reelsGroup.removeChildren();reelsGroup.position=view.center;reelWidth=Math.min(view.size.width*0.28,200);reelHeight=Math.min(view.size.height*0.7,320);symbolHeight=Math.floor(reelHeight/visiblePerReel);const spacing=4;const startX=-(reelCount-1)*(reelWidth+20)/2;for(let r=0;r<reelCount;r++){const reelGroup=new paper.Group();reelGroup.position=new paper.Point(startX+r*(reelWidth+20),0);const items=[];const pool=[];for(let rep=0;rep<6;rep++){const shuffled=NUMBERS.slice().sort(()=>Math.random()-0.5);pool.push(...shuffled)}for(let i=0;i<pool.length;i++){const sym=makeSymbol(pool[i],reelWidth-10,symbolHeight);sym.position=new paper.Point(0,i*(symbolHeight+spacing)-(pool.length*(symbolHeight+spacing))/2);reelGroup.addChild(sym);items.push({group:sym,number:pool[i],index:i})}const mask=new paper.Path.Rectangle(new paper.Point(-reelWidth/2,-reelHeight/2),new paper.Size(reelWidth,reelHeight));mask.fillColor='black';mask.opacity=0;reelGroup.addChild(mask);reelGroup.sendToBack(mask);reelGroup.clipped=true;reelItems.push({group:reelGroup,items,offset:0,poolLength:pool.length});reelsGroup.addChild(reelGroup)}}function animateReelOffset(reel,targetOffset,duration){return new Promise(resolve=>{const startOffset=reel.offset||0;const delta=targetOffset-startOffset;const startTime=performance.now();function step(t){const now=t-startTime;const p=Math.min(1,now/duration);const eased=1-Math.pow(1-p,3);const cur=startOffset+delta*eased;const spacing=symbolHeight+4;for(let i=0;i<reel.items.length;i++){const it=reel.items[i];it.group.position.y=cur+i*spacing-(reel.poolLength*spacing)/2}reel.offset=cur;view.update();if(p<1)requestAnimationFrame(step);else resolve()}requestAnimationFrame(step)})}function spinReelsToNumber(targetNumber){const promises=[];for(let r=0;r<reelCount;r++){const reel=reelItems[r];const candidateIndices=reel.items.filter(i=>i.number===targetNumber).map(i=>i.index);const chosenIdx=candidateIndices[Math.floor(Math.random()*candidateIndices.length)];const spacing=symbolHeight+4;const currentOffset=reel.offset||0;const poolLen=reel.poolLength;const targetY=-(chosenIdx*(spacing))+((poolLen*(spacing))/2)-(spacing/2);const extraLoops=3+r;const newOffset=currentOffset+(targetY-currentOffset)+(poolLen*spacing*extraLoops);const dur=7000+Math.floor(Math.random()*3000)+r*250;promises.push(animateReelOffset(reel,newOffset,dur))}return Promise.all(promises).then(()=>targetNumber)}let resizeT=null;view.onResize=function(){if(resizeT)clearTimeout(resizeT);resizeT=setTimeout(()=>buildReels(),120)}for(let i=0;i<2;i++)genCodePlayer();for(let i=0;i<1;i++)genCodeAdmin();['Luna','Neo','Rosa'].forEach((n,i)=>{const pid=uid('p');ROOM.players[pid]={id:pid,name:n,chips:1000-i*100}});refreshHostCodes();refreshHostPlayers();refreshPlayersSide();buildBetBoard();buildReels();centerResult.textContent='—';sessionInfo.textContent='Modo: local (sin PeerServer)';window._ROOM=ROOM;window._local=localSession;function sanitizeName(n){return String(n||'').replace(/[^0-9A-Za-zÁÉÍÓÚáéíóúñÑ _-]/g,'').slice(0,16)||'Player'}
 </script>
 </body>
 </html>
