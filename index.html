@@ -1,0 +1,357 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>LAN P2P Demo - PeerJS single file</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:12px;background:#f6f7fb;color:#111}
+    #top{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+    button{padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer}
+    #status{font-size:0.9rem;color:#333}
+    #game{border:1px solid #999;background:#fff;display:block;margin-top:8px}
+    #controls{margin-left:12px}
+    #log{height:80px;overflow:auto;background:#fff;border:1px solid #ddd;padding:6px;font-size:12px}
+    .small{font-size:0.9rem;color:#444}
+  </style>
+</head>
+<body>
+  <div id="top">
+    <div>
+      <button id="startHost">Iniciar consola (host)</button>
+      <button id="startClient">Conectar como jugador</button>
+    </div>
+    <div id="status">Estado: inactivo</div>
+    <div id="controls" class="small">
+      Tu ID: <span id="myId">-</span> &nbsp; | &nbsp;
+      Conectado a: <span id="peerId">-</span>
+    </div>
+  </div>
+
+  <canvas id="game" width="640" height="360"></canvas>
+
+  <div style="margin-top:8px;display:flex;gap:8px">
+    <div style="flex:1">
+      <div class="small">Registro (mensajes de señal/estado)</div>
+      <div id="log"></div>
+    </div>
+    <div style="width:240px">
+      <div class="small">Instrucciones</div>
+      <div style="background:#fff;border:1px solid #ddd;padding:8px;font-size:13px">
+        - Presiona "Iniciar consola (host)" en la máquina que actuará como host. Copia el "Tu ID" y compártelo con jugadores.<br>
+        - En cada jugador: presiona "Conectar como jugador" e introduce el ID del host cuando se pida.<br>
+        - Host mueve la pelota (arrastra con el ratón) o presiona espacio para lanzarla; jugadores mueven su paleta con el mouse para atraparla.<br>
+        - Comunicación P2P usa PeerJS public broker. Si falla, recarga la página.
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Single-file P2P demo using PeerJS public broker.
+  - Host: creates a DataConnection for each client and sends authoritative ball state.
+  - Client: connects to host's peer ID, receives ball updates and sends paddle position.
+  - Messages are JSON with type: 'ball', 'paddle', 'join', 'chat'
+  Notes:
+  - PeerJS uses a public broker by default; reliability not guaranteed but works for testing.
+  - Serve via HTTP(S) for best results (some browsers restrict getUserMedia/secure contexts).
+*/
+
+// --- Utilities ---
+const logEl = id('log');
+function log(msg){ const p=document.createElement('div'); p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`; logEl.appendChild(p); logEl.scrollTop = logEl.scrollHeight; }
+function id(x){ return document.getElementById(x); }
+function qs(sel){ return document.querySelector(sel); }
+
+// --- PeerJS loader (dynamic) ---
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+
+// --- Game state ---
+const canvas = id('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+let mode = 'idle'; // 'host' or 'client'
+let peer = null;
+let connections = {}; // for host: peerId -> conn
+let conn = null; // for client: connection to host
+
+// Ball state (host authoritative)
+const ball = { x: W/2, y: H/2, vx: 0, vy: 0, r: 10, held: false };
+
+// Players state (client sends paddle pos)
+const paddles = {}; // peerId -> {x,y,w,h,color}
+
+// Host ID shown in UI
+const myIdEl = id('myId');
+const peerIdEl = id('peerId');
+const statusEl = id('status');
+
+function setStatus(s){ statusEl.textContent = 'Estado: ' + s; }
+
+// Demo colors
+function colorFor(id){ let h = 0; for(let i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i))%360; return `hsl(${h},70%,45%)`; }
+
+// --- Rendering ---
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // draw ball
+  ctx.fillStyle = '#e33';
+  ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+
+  // paddles
+  for(const pid in paddles){
+    const p = paddles[pid];
+    ctx.fillStyle = p.color || '#246';
+    ctx.fillRect(p.x - p.w/2, p.y - p.h/2, p.w, p.h);
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(pid === peer?.id ? 'YOU' : pid.slice(0,6), p.x - p.w/2 + 6, p.y + 4);
+  }
+
+  // host label
+  if(mode === 'host'){
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(6,6,120,26);
+    ctx.fillStyle = '#fff';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('Host (authoritative)', 12, 24);
+  }
+}
+
+// --- Physics update (host authoritative) ---
+function updatePhysics(dt){
+  if(mode !== 'host') return;
+  if(!ball.held){
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+    ball.vy += 200 * dt; // gravity-ish
+    // bounce walls
+    if(ball.x < ball.r){ ball.x = ball.r; ball.vx *= -0.8; }
+    if(ball.x > W - ball.r){ ball.x = W - ball.r; ball.vx *= -0.8; }
+    if(ball.y < ball.r){ ball.y = ball.r; ball.vy *= -0.8; }
+    if(ball.y > H - ball.r){ ball.y = H - ball.r; ball.vy *= -0.8; }
+  }
+
+  // collision with paddles
+  for(const pid in paddles){
+    const p = paddles[pid];
+    if(ball.x + ball.r > p.x - p.w/2 && ball.x - ball.r < p.x + p.w/2 &&
+       ball.y + ball.r > p.y - p.h/2 && ball.y - ball.r < p.y + p.h/2){
+      // simple reflect
+      ball.vy = -Math.abs(ball.vy) - 120;
+      ball.vx += (ball.x - p.x) * 0.1;
+      // notify that a hit occurred
+      broadcast({type:'hit', by: pid, x: ball.x, y: ball.y});
+    }
+  }
+
+  // periodically broadcast authoritative ball state
+  broadcast({type:'ball', x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy, held: ball.held});
+}
+
+// Broadcast to all clients (host)
+function broadcast(msg){
+  const s = JSON.stringify(msg);
+  for(const k in connections){
+    const c = connections[k];
+    if(c.open) try{ c.send(s); } catch(e){ /*ignore*/ }
+  }
+}
+
+// Send from client to host
+function sendToHost(msg){
+  if(conn && conn.open) conn.send(JSON.stringify(msg));
+}
+
+// --- PeerJS high-level setup ---
+async function ensurePeerJS(){
+  if(window.Peer) return;
+  // using peerjs from CDN
+  await loadScript('https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js');
+  log('PeerJS cargado');
+}
+
+// Create peer (both host and client)
+async function createPeer(){
+  await ensurePeerJS();
+  return new Promise((res,rej)=>{
+    // Default PeerJS options use peerjs broker server. You can set key/host/port for custom broker.
+    const p = new Peer(); // public broker
+    p.on('open', id => { log('Peer open: ' + id); res(p); });
+    p.on('error', err => { log('Peer error: ' + err); setStatus('error'); rej(err); });
+  });
+}
+
+// --- Host flow ---
+async function startHost(){
+  mode = 'host';
+  setStatus('iniciando host...');
+  peer = await createPeer();
+  myIdEl.textContent = peer.id;
+  peer.on('connection', c => {
+    log('Cliente conectado: ' + c.peer);
+    connections[c.peer] = c;
+    c.on('data', d => onMessageFromClient(c.peer, d));
+    c.on('close', ()=>{ delete connections[c.peer]; delete paddles[c.peer]; log('Cliente desconectado: '+c.peer); peerIdEl.textContent = '-'; });
+    c.on('open', ()=> {
+      // init paddle entry
+      paddles[c.peer] = { x: W/2, y: H-40, w: 100, h: 14, color: colorFor(c.peer) };
+      // send welcome and current ball state
+      try{ c.send(JSON.stringify({type:'welcome', id:peer.id})); }catch(e){}
+    });
+  });
+  peer.on('disconnected', ()=> log('Peer disconnected'));
+  setStatus('host listo');
+  myIdEl.textContent = peer.id;
+  startLoop();
+}
+
+// --- Client flow ---
+async function startClientFlow(){
+  mode = 'client';
+  setStatus('creando peer...');
+  peer = await createPeer();
+  myIdEl.textContent = peer.id;
+  setStatus('esperando ID del host...');
+  const hostId = prompt('Introduce el ID del host (copiado desde la consola):');
+  if(!hostId){ setStatus('cancelado'); return; }
+  setStatus('conectando a host ' + hostId);
+  const c = peer.connect(hostId);
+  c.on('open', ()=> {
+    log('Conectado al host ' + hostId);
+    conn = c;
+    peerIdEl.textContent = hostId;
+    // create local paddle
+    paddles[peer.id] = { x: W/2, y: H-40, w: 120, h: 14, color: colorFor(peer.id) };
+    c.on('data', d => onMessageFromHost(d));
+    c.on('close', ()=>{ log('Conexión cerrada'); setStatus('desconectado'); });
+    setStatus('conectado a host');
+  });
+  c.on('error', e => { log('Conn error: '+e); setStatus('error'); });
+  startLoop();
+}
+
+// --- Message handlers ---
+function onMessageFromClient(peerId, raw){
+  let msg;
+  try{ msg = typeof raw === 'string' ? JSON.parse(raw) : raw; }catch(e){ return; }
+  if(msg.type === 'paddle'){
+    // update paddle from client
+    paddles[peerId] = paddles[peerId] || { x: W/2, y: H-40, w: 100, h: 14, color: colorFor(peerId) };
+    paddles[peerId].x = msg.x;
+    paddles[peerId].y = msg.y;
+  } else if(msg.type === 'chat'){
+    log(`msg de ${peerId}: ${msg.text}`);
+  }
+}
+
+function onMessageFromHost(raw){
+  let msg;
+  try{ msg = typeof raw === 'string' ? JSON.parse(raw) : raw; }catch(e){ return; }
+  if(msg.type === 'ball'){
+    // client updates local ball state
+    ball.x = msg.x; ball.y = msg.y; ball.vx = msg.vx; ball.vy = msg.vy; ball.held = msg.held;
+  } else if(msg.type === 'welcome'){
+    log('Welcome from host: ' + msg.id);
+  } else if(msg.type === 'hit'){
+    // visual effect: small flash
+    flash();
+    log('Hit by ' + msg.by);
+  }
+}
+
+// small flash on hit
+let flashT = 0;
+function flash(){ flashT = 0.2; }
+function drawFlash(dt){
+  if(flashT <= 0) return;
+  flashT -= dt;
+  ctx.fillStyle = `rgba(255,230,120,${flashT*2})`;
+  ctx.fillRect(0,0,W,H);
+}
+
+// --- Input handling ---
+let mouseDown = false;
+canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  if(mode === 'host'){
+    // if mouse close to ball, pick it up
+    const dx = x - ball.x, dy = y - ball.y;
+    if(Math.hypot(dx,dy) <= ball.r + 6){ ball.held = true; mouseDown = true; }
+  } else if(mode === 'client'){
+    mouseDown = true;
+  }
+});
+canvas.addEventListener('mouseup', e => {
+  mouseDown = false;
+  if(mode === 'host' && ball.held){
+    ball.held = false;
+    // throw ball with some velocity
+    ball.vx = (Math.random()-0.5)*200;
+    ball.vy = -200;
+  }
+});
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  if(mode === 'host' && mouseDown && ball.held){
+    ball.x = x; ball.y = y;
+  }
+  // client moving paddle
+  if(mode === 'client' && paddles[peer?.id]){
+    paddles[peer.id].x = x;
+    // send paddle update to host (throttle)
+    throttleSendPaddle();
+  }
+});
+
+// space to launch ball when host
+window.addEventListener('keydown', e => {
+  if(e.code === 'Space' && mode === 'host'){
+    ball.held = false;
+    ball.vx = (Math.random()-0.5)*200; ball.vy = -220;
+  }
+});
+
+// throttle paddle sends
+let lastPaddleSent = 0;
+function throttleSendPaddle(){
+  const now = performance.now();
+  if(now - lastPaddleSent < 40) return;
+  lastPaddleSent = now;
+  const p = paddles[peer.id];
+  if(!p) return;
+  sendToHost({type:'paddle', x: p.x, y: p.y});
+}
+
+// --- Main loop ---
+let last = performance.now();
+function startLoop(){
+  last = performance.now();
+  requestAnimationFrame(tick);
+}
+function tick(ts){
+  const dt = (ts - last)/1000; last = ts;
+  if(mode === 'host') updatePhysics(dt);
+  draw();
+  drawFlash(dt);
+  requestAnimationFrame(tick);
+}
+
+// --- UI buttons ---
+id('startHost').addEventListener('click', async ()=>{
+  if(mode !== 'idle'){ alert('Ya iniciado'); return; }
+  try{ await startHost(); } catch(e){ log('No se pudo iniciar host: '+e); }
+});
+id('startClient').addEventListener('click', async ()=>{
+  if(mode !== 'idle'){ alert('Ya iniciado'); return; }
+  try{ await startClientFlow(); } catch(e){ log('No se pudo conectar: '+e); }
+});
+
+// --- clean unload ---
+window.addEventListener('beforeunload', ()=>{ try{ peer && peer.destroy(); }catch(e){} });
+
+</script>
+</body>
+</html>
